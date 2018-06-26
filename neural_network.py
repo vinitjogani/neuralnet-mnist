@@ -1,12 +1,13 @@
 import numpy as np, pandas as pd
 
 class NeuralNetwork:
-    def __init__(self, layers = (1, 10, 1), alpha = .3, reg = 0, epochs=2, batch_size = 100):
+    def __init__(self, layers = (1, 10, 1), alpha = 3e-2, reg = 1e-3, epochs=2, batch_size = 100, momentum = 0.8):
         # Free parameters
         self.alpha = alpha
         self.reg = reg
         self.epochs = epochs
         self.batch_size = batch_size
+        self.momentum = momentum
 
         # Architecture
         self.layers = layers
@@ -27,9 +28,6 @@ class NeuralNetwork:
         overflow = lambda zi: 0 if -zi > np.log(np.finfo(np.float).max) else zi
         overflow = np.vectorize(overflow)
         return 1 / (1 + np.exp(-overflow(z)))
-
-    def gprime(self, a):
-        return 1 if a > 0 else 0
 
     def v(self, arr):
         """
@@ -93,12 +91,12 @@ class NeuralNetwork:
         y = np.array(self.transform_y(y))
 
         for epoch in range(self.epochs):
+            Delta = np.array(self.theta) * 0
             for batch in range(len(X) // self.batch_size):
                 start_ix = batch * self.batch_size
                 end_ix = (batch + 1) * self.batch_size
 
                 start_cost = self.cost(X[start_ix:end_ix],  y[start_ix:end_ix])
-                Delta = np.array(self.theta) * 0
                 for i in range(start_ix, end_ix):
                     # Forward
                     activation = self.forward(X[i])
@@ -116,6 +114,8 @@ class NeuralNetwork:
 
                 end_cost = self.cost(X[start_ix:end_ix],  y[start_ix:end_ix])
                 print(end_ix, start_cost, end_cost, end_cost - start_cost)
+
+                Delta *= self.momentum
 
     def cost(self, X, y):
         """
